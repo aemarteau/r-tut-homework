@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+params: 
+  data: "/Users/bella/Desktop/Psychologie/Versuchsplanung/RTutorium"
+---
+
+```{r}
+#loading packages and importing data
+pacman::p_load(pacman, dplyr, GGally, ggplot2, ggthemes, 
+  ggvis, httr, lubridate, plotly, rio, rmarkdown, shiny, 
+  stringr, tidyr, gtools)
+library(tidyverse)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+params$data
+HA02rawdata <- read_csv(file.path(params$data, "2-HA-data.csv"))
+
+#tidying data & defining variables
+HA02data <- HA02rawdata |>
+  mutate_at(vars(c("gender", "load", "congruent")), factor)
+HA02data$gender <- factor(HA02data$gender,
+                          levels = c(1, 2, 3),
+                          labels = c("w", "m", "d"))
+HA02data$congruent <- factor(HA02data$congruent,
+                              levels = c(1, 0),
+                              labels = c("congruent", "incongruent"))
+
+desHA02 <- HA02data |>
+  group_by(id) |>
+  slice(which(row_number() %% 2 == 1))
+
+mean(desHA02$age)
+sd(desHA02$age)
+
+HA02data |>
+  select(congruent, load, rt) |>
+  mutate(mean1 = mean(rt[congruent == "congruent" & load == "low"]),
+         mean2 = mean(rt[congruent == "incongruent" & load == "low"]),
+         sd1 = sd(rt[congruent == "congruent" & load == "high"]), 
+         sd2 = sd(rt[congruent == "incongruent" & load == "high"]))
+
+diff(range(HA02data$rt))
+
+ggplot(HA02data, aes(x = congruent, y = rt, fill = load)) +
+  geom_boxplot()
+  
+  
+```
+
