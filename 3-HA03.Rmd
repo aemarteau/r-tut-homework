@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+params: 
+  data: "/Users/bella/Desktop/Psychologie/Versuchsplanung/RTutorium"
+---
+
+```{r}
+#loading packages and importing data
+pacman::p_load(pacman, dplyr, GGally, ggplot2, ggthemes, 
+  ggvis, httr, lubridate, plotly, rio, rmarkdown, shiny, 
+  stringr, tidyr, gtools)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+params$data
+HA03rawdata <- read_csv(file.path(params$data, "3-HA-data.csv"))
+
+#looking at data from first test subject
+HA03data1 <- HA03rawdata |>
+  filter(id==1) |>
+  mutate(accuracy_item = if_else((source=="New" & response=="New"), T, F),
+         accuracy_source = if_else((source==response & source!="New"), T, F))
+
+ggplot(HA03data1, aes(x = accuracy_source)) +
+  geom_bar()
+
+#item and source accuracy for all subjects
+HA03data <- HA03rawdata |>
+  group_by(id, group, source, response) |>
+  mutate(accuracy_item = if_else(((source=="New")==(response=="New")), T, F),
+         accuracy_source = if_else((source==response & source!="New"), T, F)) |>
+  summarise_at(vars(-c(item)), funs(sum(., na.rm=TRUE)))
+
+#some descriptive values
+mean(HA03data$accuracy_item[HA03data$group=="younger"])
+sd(HA03data$accuracy_item[HA03data$group=="younger"])
+mean(HA03data$accuracy_source[HA03data$group=="older"])
+sd(HA03data$accuracy_source[HA03data$group=="older"])
+
+ggplot(HA03data, aes(x = accuracy_source, y = accuracy_item, colour = group)) +
+  geom_point()
+
+```
+
+
+```{r}
+#new data frames for aggregated values
+#aggregated "Itemgedächtnis" (memory for items)
+agg_item <- HA03rawdata |>
+  group_by(id, group) |>
+  mutate(accuracy_item = if_else(((source=="New")==(response=="New")), T, F)) |>
+  summarise_at(vars(-c(item, source, response)), funs(sum(., na.rm=TRUE)))
+
+#aggregated "Quellengedächtnis" (memory of stimulus source), ignoring all new stimuli
+agg_source <- HA03rawdata |>
+  group_by(id, group) |>
+  filter("New" %in% source) |>
+  mutate(accuracy_source = if_else((source==response & source!="New"), T, F)) |>
+  summarise_at(vars(-c(item, source, response)), funs(sum(., na.rm=TRUE)))
+
+#try aggregate function
+agg_item2 <- HA03rawdata |>
+  group_by(id, source) |>
+  mutate(accuracy_item = if_else(((source=="New")==(response=="New")), T, F)) |>
+  aggregate(x = accuracy_item ~id + source, FUN = mean)
+
+agg_source2 <- HA03rawdata |>
+  group_by(id, source) |>
+  mutate(accuracy_source = if_else((source==response & source!="New"), T, F)) |>
+   aggregate(x = accuracy_source ~id + source, FUN = sum)
+
+#wide format
+wide_source <- pivot_wider(agg_source2, names_from = source, values_from = accuracy_source) |>
+  mutate(diff = A-B)
+
+wide_item <- pivot_wider(agg_item2, names_from = source, values_from = accuracy_item) |>
+  mutate(diff = A-B)
+
+ggplot(wide_source, aes(x = diff)) +
+  geom_histogram()
+```
+
+```{r}
+?t.test()
+
+#t test for item accuracy
+t.test(accuracy_item ~group, data = agg_item)
+
+#one way t test for source accuracy 
+t.test(accuracy_source ~group, agg_source, alternative = "less")
+
+#paired t test for item accuracy: is one source more memorable than the other?
+t.test(x = wide_item$A, 
+       y = wide_item$B, 
+       data = wide_item, 
+       paired = T)
+```
+
