@@ -36,7 +36,11 @@ HA01data |>
 #plotting department count 
 ggplot(HA01data) +
   geom_bar(aes(department, fill = gender))
+```
 
+
+```{r}
+#work in progress
 #y <- HA01data|>
  # select(-(id:department)) |>
   #lapply(function(x) ifelse(x %% 2 == 0, abs(x - 6), x))
@@ -47,7 +51,10 @@ ggplot(HA01data) +
    #         O = mean(O1:O12),
     #        G = mean(G1:G12),
      #       V = mean(V1:V12))
+```
 
+
+```{r}
 #function to recode reverse items: absolute number of (x-6)
 recode_items <- function(reverse_items) {
   items <- abs(reverse_items - 6)
